@@ -1,0 +1,39 @@
+{
+    "name": "amplitude-api",
+    "version": "1.0.0",
+    "description": "Simple, no-dependency wrapper around Amplitude's HTTP API",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/tmont/amplitude-api"
+    },
+    "scripts": {
+        "test": "node_modules/.bin/mocha --require ts-node/register --recursive tests/*.ts",
+        "compile": "node_modules/.bin/tsc"
+    },
+    "keywords": [
+        "amplitude",
+        "api",
+        "metrics",
+        "analytics"
+    ],
+    "author": "tmont",
+    "license": "MIT",
+    "engines": {
+        "node": ">=8"
+    },
+    "files": [
+        "index.ts",
+        "index.js"
+    ],
+    "devDependencies": {
+        "@types/expect.js": "0.3.29",
+        "@types/express": "4.16.1",
+        "@types/mocha": "5.2.6",
+        "@types/node": "10.14.6",
+        "expect.js": "0.3.1",
+        "express": "4.17.0",
+        "mocha": "6.1.4",
+        "ts-node": "8.1.0",
+        "typescript": "3.4.5"
+    }
+}
