@@ -128,17 +128,7 @@ export class AmplitudeClient {
         };
 
         if (!this.enabled) {
-            return {
-                body: Buffer.alloc(0),
-                start: new Date(),
-                end: new Date(),
-                requestOptions: {},
-                responseHeaders: {},
-                statusCode: 0,
-                succeeded: true,
-                retryCount: 0,
-                requestData: formData,
-            };
+            return this.emptyResponse(formData);
         }
 
         const options: http.RequestOptions = {
@@ -168,7 +158,25 @@ export class AmplitudeClient {
             path: '/groupidentify',
         };
 
+        if (!this.enabled) {
+            return this.emptyResponse(formData);
+        }
+
         return this.sendRequest(options, formData);
+    }
+
+    private emptyResponse<T>(formData: T): AmplitudeResponse<T> {
+        return {
+            body: Buffer.alloc(0),
+            start: new Date(),
+            end: new Date(),
+            requestOptions: {},
+            responseHeaders: {},
+            statusCode: 0,
+            succeeded: true,
+            retryCount: 0,
+            requestData: formData,
+        };
     }
 
     private async sendRequest<T>(

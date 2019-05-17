@@ -37,17 +37,7 @@ class AmplitudeClient {
             event: JSON.stringify(event),
         };
         if (!this.enabled) {
-            return {
-                body: Buffer.alloc(0),
-                start: new Date(),
-                end: new Date(),
-                requestOptions: {},
-                responseHeaders: {},
-                statusCode: 0,
-                succeeded: true,
-                retryCount: 0,
-                requestData: formData,
-            };
+            return this.emptyResponse(formData);
         }
         const options = {
             method: 'POST',
@@ -68,7 +58,23 @@ class AmplitudeClient {
             method: 'POST',
             path: '/groupidentify',
         };
+        if (!this.enabled) {
+            return this.emptyResponse(formData);
+        }
         return this.sendRequest(options, formData);
+    }
+    emptyResponse(formData) {
+        return {
+            body: Buffer.alloc(0),
+            start: new Date(),
+            end: new Date(),
+            requestOptions: {},
+            responseHeaders: {},
+            statusCode: 0,
+            succeeded: true,
+            retryCount: 0,
+            requestData: formData,
+        };
     }
     async sendRequest(options, formData, retryCount = 0) {
         const url = new url_1.URL(this.endpoint);
