@@ -64,8 +64,8 @@ export interface Groups {
 }
 
 // https://developers.amplitude.com/#keys-for-the-event-argument
-export interface AmplitudeEventData extends CommonEventProps {
-    event_type: string;
+export interface AmplitudeEventData<TEventNames = string> extends CommonEventProps {
+    event_type: TEventNames;
     user_id: string;
     device_id?: string;
     time?: number;
@@ -141,7 +141,7 @@ export interface AmplitudeIdentifyRequestData extends ApiKeyData {
     identification: string;
 }
 
-export class AmplitudeClient {
+export class AmplitudeClient<TEventNames = string> {
     private readonly apiKey: string;
     private readonly enabled: boolean;
     private readonly appVersion: string | null;
@@ -164,7 +164,7 @@ export class AmplitudeClient {
     }
 
     public async track(
-        event: AmplitudeEventData,
+        event: AmplitudeEventData<TEventNames>,
         reqOptions?: https.RequestOptions
     ): Promise<AmplitudeResponse<AmplitudeEventRequestData>> {
         if (this.setTime) {
