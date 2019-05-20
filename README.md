@@ -1,4 +1,4 @@
-# amplitude-api
+# amplitude-client-node
 
 A simple wrapper around Amplitude's Groups and HTTP APIs.
 
@@ -14,14 +14,14 @@ Features:
 
 ## Installation
 ```
-npm install amplitude-api
+npm install amplitude-client-node
 ```
 
 ## Usage
 ```javascript
-const amplitude = require('amplitude-api');
+const amplitude = require('amplitude-client-node');
 // for typescript:
-// import * as amplitude from 'amplitude-api';
+// import * as amplitude from 'amplitude-client-node';
 
 const client = new amplitude.AmplitudeClient('api key', {
     // all keys are optional

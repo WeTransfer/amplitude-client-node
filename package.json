@@ -1,10 +1,10 @@
 {
-    "name": "amplitude-api",
+    "name": "amplitude-client-node",
     "version": "1.0.0",
     "description": "Simple, no-dependency wrapper around Amplitude's HTTP API",
     "repository": {
         "type": "git",
-        "url": "https://github.com/tmont/amplitude-api"
+        "url": "https://github.com/WeTransfer/amplitude-client-node"
     },
     "scripts": {
         "test": "node_modules/.bin/mocha --require ts-node/register --recursive tests/*.ts",
