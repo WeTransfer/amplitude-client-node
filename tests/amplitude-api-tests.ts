@@ -187,6 +187,42 @@ describe('Amplitude API', () => {
             throw new Error('expected error to be thrown');
         });
 
+        [ 400, 413, 429, 501 ].forEach((status) => {
+            it(`should not retry for ${status} status code`, async () => {
+                let callCount = 0;
+                app.post('/httpapi', (req, res) => {
+                    callCount++;
+                    res.status(status);
+                    res.send('nope');
+                });
+
+                const client = new amplitude.AmplitudeClient('xxx', {
+                    endpoint,
+                    maxRetries: 5,
+                });
+                const event: amplitude.AmplitudeEventData = {
+                    user_id: '12345',
+                    event_type: 'my event',
+                    ip: '1.2.3.4'
+                };
+                try {
+                    await client.track(event);
+                } catch (e) {
+                    const error = e as amplitude.AmplitudeApiError<any>;
+                    expect(callCount).to.equal(1);
+                    expect(e).to.be.a(amplitude.AmplitudeApiError);
+                    expect(error).to.have.property('response');
+                    expect(error).to.have.property('message',
+                        `Amplitude API call failed with status ${status} (${endpoint}/httpapi)`);
+                    expect(error.response.statusCode).to.equal(status);
+                    expect(error.response.succeeded).to.equal(false);
+                    return;
+                }
+
+                throw new Error('expected error to be thrown');
+            });
+        });
+
         it('should not track event if not enabled', async () => {
             let callCount = 0;
             app.post('/httpapi', (req, res) => {
