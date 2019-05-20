@@ -53,3 +53,23 @@ client.track(myEvent)
         console.error(`amplitude api call failed after ${err.response.retryCount} retries: ${err.message}`);
     });
 ```
+
+Successful calls return an `AmplitudeResponse` object:
+
+```typescript
+interface AmplitudeResponse<T> {
+    statusCode: number;
+    body: Buffer;
+    start: Date;
+    end: Date;
+    requestOptions: https.RequestOptions;
+    responseHeaders: http.IncomingHttpHeaders;
+    succeeded: boolean;
+    retryCount: number;
+    requestData: T;
+}
+```
+
+If all retries fail, or a non-retryable status code is returned from the Amplitude
+API, then an error object is thrown that has a `response` property that is set to
+the `AmplitudeResponse` object defined above.

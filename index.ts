@@ -106,7 +106,7 @@ interface AmplitudeResponse<T> {
     body: Buffer;
     start: Date;
     end: Date;
-    requestOptions: http.RequestOptions;
+    requestOptions: https.RequestOptions;
     responseHeaders: http.IncomingHttpHeaders;
     succeeded: boolean;
     retryCount: number;
