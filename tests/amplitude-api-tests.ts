@@ -177,8 +177,8 @@ describe('Amplitude API', () => {
                 expect(callCount).to.equal(6);
                 expect(e).to.be.a(amplitude.AmplitudeApiError);
                 expect(error).to.have.property('response');
-                expect(error).to.have.property('message',
-                    `Amplitude API call failed with status 502 (${endpoint}/httpapi)`);
+                expect(error).to.have.property('message', `Amplitude API call to ` +
+                    `${endpoint}/httpapi failed with status 502 after 5 retries`);
                 expect(error.response.statusCode).to.equal(502);
                 expect(error.response.succeeded).to.equal(false);
                 return;
@@ -212,8 +212,8 @@ describe('Amplitude API', () => {
                     expect(callCount).to.equal(1);
                     expect(e).to.be.a(amplitude.AmplitudeApiError);
                     expect(error).to.have.property('response');
-                    expect(error).to.have.property('message',
-                        `Amplitude API call failed with status ${status} (${endpoint}/httpapi)`);
+                    expect(error).to.have.property('message', `Amplitude API call to ` +
+                        `${endpoint}/httpapi failed with status ${status} after 0 retries`);
                     expect(error.response.statusCode).to.equal(status);
                     expect(error.response.succeeded).to.equal(false);
                     return;

@@ -3,6 +3,8 @@ import * as https from 'https';
 import * as querystring from 'querystring';
 import {URL} from 'url';
 
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
 export interface ClientOptions {
     appVersion?: string;
     enabled?: boolean;
@@ -10,6 +12,7 @@ export interface ClientOptions {
     maxRetries?: number;
     timeoutMs?: number;
     endpoint?: string;
+    logging?: (level: LogLevel, message: string) => void;
 }
 
 interface CommonEventProps {
@@ -146,6 +149,7 @@ export class AmplitudeClient {
     private readonly maxRetries: number;
     private readonly timeoutMs: number;
     private readonly endpoint: string;
+    private readonly logging?: (level: LogLevel, message: string) => void;
 
     public constructor(apiKey: string, options: ClientOptions = {}) {
         options = options || {};
@@ -156,6 +160,7 @@ export class AmplitudeClient {
         this.maxRetries = options.maxRetries || 2;
         this.timeoutMs = options.timeoutMs || 5000;
         this.endpoint = options.endpoint || 'https://api.amplitude.com';
+        this.logging = options.logging;
     }
 
     public async track(
@@ -240,10 +245,11 @@ export class AmplitudeClient {
         options.timeout = this.timeoutMs;
 
         const postData = querystring.stringify(formData);
+        const byteLength = Buffer.byteLength(postData);
 
         options.headers = options.headers || {};
         options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-        options.headers['Content-Length'] = Buffer.byteLength(postData);
+        options.headers['Content-Length'] = byteLength;
 
         if (!this.enabled) {
             return {
@@ -259,14 +265,20 @@ export class AmplitudeClient {
             };
         }
 
+        const apiUrl = `${options.protocol}//${options.hostname}` +
+            `${options.port ? ':' + options.port : ''}${options.path}`;
+
         const result = await new Promise<AmplitudeResponse<T>>((resolve, reject) => {
             const start = new Date();
+
             try {
                 const httpLib = options.protocol === 'https:' ? https : http;
+                this.log('debug',
+                    `sending request to Amplitude API ${apiUrl} (${byteLength} bytes)`);
                 const req = httpLib.request(options, (res) => {
                     res.on('error', reject);
                     const chunks: Buffer[] = [];
-                    res.on('data', chunk => chunks.push(chunk));
+                    res.on('data', (chunk: Buffer) => chunks.push(chunk));
                     res.on('end', () => {
                         resolve({
                             start,
@@ -300,20 +312,35 @@ export class AmplitudeClient {
             504: true,
         };
 
+        const elapsed = result.end.getTime() - result.start.getTime();
+
         if (!retryableStatusCodes[result.statusCode] || retryCount >= this.maxRetries) {
             if (result.succeeded) {
+                this.log('info', `successful Amplitude API call to ${apiUrl} ` +
+                    `after ${retryCount} retries (${elapsed}ms)`);
                 return result;
             }
 
-            const urlData = result.requestOptions;
-            const url = `${urlData.protocol}//${urlData.hostname}` +
-                `${urlData.port ? ':' + urlData.port : ''}${urlData.path}`;
-            throw new AmplitudeApiError(
-                `Amplitude API call failed with status ${result.statusCode} (${url})`,
-                result,
-            );
+            const message = `Amplitude API call to ${apiUrl} failed with ` +
+                `status ${result.statusCode} after ${retryCount} retries`;
+            this.log('error', message + ` (${elapsed}ms)`);
+            throw new AmplitudeApiError(message, result);
         }
 
+        this.log('warn', `retrying Amplitude request to ${apiUrl} ` +
+            `(status code: ${result.statusCode}, retries: ${retryCount})`);
         return this.sendRequest(options, formData, retryCount + 1);
+    }
+
+    private log(level: LogLevel, message: string): void {
+        if (!this.logging || typeof(this.logging) !== 'function') {
+            return;
+        }
+
+        try {
+            this.logging(level, message);
+        } catch (e) {
+            // ignore logging errors
+        }
     }
 }

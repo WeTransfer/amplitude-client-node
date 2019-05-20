@@ -33,6 +33,9 @@ const client = new amplitude.AmplitudeClient('api key', {
     endpoint: 'https://api.amplitude.com',
     appVersion: '1.2.3', // will set app_version in all outgoing events
     setTime: true, // will set time to Date.now() in all outgoing events
+    logging: (level, message) => {
+        console.log(`${level}: ${message}`);
+    }
 });
 
 const myEvent = {

@@ -21,6 +21,7 @@ class AmplitudeClient {
         this.maxRetries = options.maxRetries || 2;
         this.timeoutMs = options.timeoutMs || 5000;
         this.endpoint = options.endpoint || 'https://api.amplitude.com';
+        this.logging = options.logging;
     }
     async track(event, reqOptions) {
         if (this.setTime) {
@@ -66,9 +67,10 @@ class AmplitudeClient {
         options.port = url.port;
         options.timeout = this.timeoutMs;
         const postData = querystring.stringify(formData);
+        const byteLength = Buffer.byteLength(postData);
         options.headers = options.headers || {};
         options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-        options.headers['Content-Length'] = Buffer.byteLength(postData);
+        options.headers['Content-Length'] = byteLength;
         if (!this.enabled) {
             return {
                 body: Buffer.alloc(0),
@@ -82,14 +84,17 @@ class AmplitudeClient {
                 requestData: formData,
             };
         }
+        const apiUrl = `${options.protocol}//${options.hostname}` +
+            `${options.port ? ':' + options.port : ''}${options.path}`;
         const result = await new Promise((resolve, reject) => {
             const start = new Date();
             try {
                 const httpLib = options.protocol === 'https:' ? https : http;
+                this.log('debug', `sending request to Amplitude API ${apiUrl} (${byteLength} bytes)`);
                 const req = httpLib.request(options, (res) => {
                     res.on('error', reject);
                     const chunks = [];
-                    res.on('data', chunk => chunks.push(chunk));
+                    res.on('data', (chunk) => chunks.push(chunk));
                     res.on('end', () => {
                         resolve({
                             start,
@@ -121,16 +126,32 @@ class AmplitudeClient {
             503: true,
             504: true,
         };
+        const elapsed = result.end.getTime() - result.start.getTime();
         if (!retryableStatusCodes[result.statusCode] || retryCount >= this.maxRetries) {
             if (result.succeeded) {
+                this.log('info', `successful Amplitude API call to ${apiUrl} ` +
+                    `after ${retryCount} retries (${elapsed}ms)`);
                 return result;
             }
-            const urlData = result.requestOptions;
-            const url = `${urlData.protocol}//${urlData.hostname}` +
-                `${urlData.port ? ':' + urlData.port : ''}${urlData.path}`;
-            throw new AmplitudeApiError(`Amplitude API call failed with status ${result.statusCode} (${url})`, result);
+            const message = `Amplitude API call to ${apiUrl} failed with ` +
+                `status ${result.statusCode} after ${retryCount} retries`;
+            this.log('error', message + ` (${elapsed}ms)`);
+            throw new AmplitudeApiError(message, result);
         }
+        this.log('warn', `retrying Amplitude request to ${apiUrl} ` +
+            `(status code: ${result.statusCode}, retries: ${retryCount})`);
         return this.sendRequest(options, formData, retryCount + 1);
+    }
+    log(level, message) {
+        if (!this.logging || typeof (this.logging) !== 'function') {
+            return;
+        }
+        try {
+            this.logging(level, message);
+        }
+        catch (e) {
+            // ignore logging errors
+        }
     }
 }
 exports.AmplitudeClient = AmplitudeClient;
