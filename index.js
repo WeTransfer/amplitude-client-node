@@ -36,12 +36,20 @@ class AmplitudeClient {
             api_key: this.apiKey,
             event: JSON.stringify(event),
         };
-        if (!this.enabled) {
-            return this.emptyResponse(formData);
-        }
         const options = {
             method: 'POST',
             path: '/httpapi',
+        };
+        return this.sendRequest(options, formData);
+    }
+    async identify(identify) {
+        const formData = {
+            api_key: this.apiKey,
+            identification: JSON.stringify(identify)
+        };
+        const options = {
+            method: 'POST',
+            path: '/identify',
         };
         return this.sendRequest(options, formData);
     }
@@ -58,23 +66,7 @@ class AmplitudeClient {
             method: 'POST',
             path: '/groupidentify',
         };
-        if (!this.enabled) {
-            return this.emptyResponse(formData);
-        }
         return this.sendRequest(options, formData);
-    }
-    emptyResponse(formData) {
-        return {
-            body: Buffer.alloc(0),
-            start: new Date(),
-            end: new Date(),
-            requestOptions: {},
-            responseHeaders: {},
-            statusCode: 0,
-            succeeded: true,
-            retryCount: 0,
-            requestData: formData,
-        };
     }
     async sendRequest(options, formData, retryCount = 0) {
         const url = new url_1.URL(this.endpoint);
@@ -86,6 +78,19 @@ class AmplitudeClient {
         options.headers = options.headers || {};
         options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         options.headers['Content-Length'] = Buffer.byteLength(postData);
+        if (!this.enabled) {
+            return {
+                body: Buffer.alloc(0),
+                start: new Date(),
+                end: new Date(),
+                requestOptions: options,
+                responseHeaders: {},
+                statusCode: 0,
+                succeeded: true,
+                retryCount: 0,
+                requestData: formData,
+            };
+        }
         const result = await new Promise((resolve, reject) => {
             const start = new Date();
             try {
@@ -116,6 +121,7 @@ class AmplitudeClient {
                 reject(e);
             }
         });
+        // https://developers.amplitude.com/#http-status-codes--amp--retrying-failed-requests
         const retryableStatusCodes = {
             500: true,
             502: true,

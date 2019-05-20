@@ -141,7 +141,7 @@ describe('Amplitude API', () => {
             let callCount = 0;
             app.post('/httpapi', (req, res) => {
                 callCount++;
-                res.status(200);
+                res.sendStatus(200);
             });
 
             const client = new amplitude.AmplitudeClient('xxx', {
@@ -156,6 +156,37 @@ describe('Amplitude API', () => {
 
             await client.track(event);
             expect(callCount).to.equal(0);
+        });
+
+        it('should throw error for invalid status code', async () => {
+            let callCount = 0;
+            app.post('/httpapi', (req, res) => {
+                callCount++;
+                res.sendStatus(501);
+            });
+
+            const client = new amplitude.AmplitudeClient('xxx', {
+                endpoint,
+            });
+            const event: amplitude.AmplitudeEventData = {
+                user_id: '12345',
+                event_type: 'my event',
+                ip: '1.2.3.4'
+            };
+
+            try {
+                await client.track(event);
+            } catch (e) {
+                const error = e as amplitude.AmplitudeApiError<any>;
+                expect(callCount).to.equal(1);
+                expect(e).to.be.a(amplitude.AmplitudeApiError);
+                expect(error).to.have.property('response');
+                expect(error.response.statusCode).to.equal(501);
+                expect(error.response.succeeded).to.equal(false);
+                return;
+            }
+
+            throw new Error('expected error to be thrown');
         });
     });
 
@@ -211,6 +242,74 @@ describe('Amplitude API', () => {
                     group_value: '12345',
                     group_properties: {
                         hello: 'world'
+                    }
+                })
+            });
+        });
+    });
+
+    describe('identify', () => {
+        it('should not identify if not enabled', async () => {
+            let callCount = 0;
+            app.post('/identify', (req, res) => {
+                callCount++;
+                res.status(200);
+            });
+
+            const client = new amplitude.AmplitudeClient('xxx', {
+                endpoint,
+                enabled: false,
+            });
+            await client.identify({
+                user_id: '12345',
+                city: 'Beantown',
+                groups: {
+                    'Team ID': '34567'
+                }
+            });
+            expect(callCount).to.equal(0);
+        });
+
+        it('should identify user', async () => {
+            let callCount = 0;
+            let reqBody: any;
+            app.post('/identify', (req, res) => {
+                callCount++;
+                reqBody = req.body;
+                res.send('hello world');
+            });
+
+            const start = new Date();
+
+            const client = new amplitude.AmplitudeClient('xxx', {
+                endpoint,
+            });
+
+            const res = await client.identify({
+                user_id: '12345',
+                city: 'Beantown',
+                groups: {
+                    'Team ID': '34567'
+                }
+            });
+
+            expect(callCount).to.equal(1);
+
+            expect(res).to.have.property('start').greaterThan(start.getTime() - 1);
+            expect(res).to.have.property('end').greaterThan(start.getTime());
+            expect(res).to.have.property('statusCode', 200);
+            expect(res).to.have.property('retryCount', 0);
+
+            expect(res).to.have.property('body').a(Buffer);
+            expect(res.body.toString('utf8')).to.equal('hello world');
+
+            expect(reqBody).to.eql({
+                api_key: 'xxx',
+                identification: JSON.stringify({
+                    user_id: '12345',
+                    city: 'Beantown',
+                    groups: {
+                        'Team ID': '34567'
                     }
                 })
             });

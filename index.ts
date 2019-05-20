@@ -12,21 +12,7 @@ export interface ClientOptions {
     endpoint?: string;
 }
 
-// https://developers.amplitude.com/#keys-for-the-event-argument
-export interface AmplitudeEventData {
-    event_type: string;
-    user_id: string;
-    device_id?: string;
-    time?: number;
-    event_properties?: {
-        [key: string]: any;
-    };
-    user_properties?: {
-        [key: string]: any;
-    };
-    groups?: {
-        [groupType: string]: string[] | string;
-    };
+interface CommonEventProps {
     app_version?: string;
     platform?: string;
     os_name?: string;
@@ -40,6 +26,51 @@ export interface AmplitudeEventData {
     city?: string;
     dma?: string;
     language?: string;
+}
+
+export interface SetProperties {
+    $set?: {
+        [key: string]: any;
+    };
+    $unset?: {
+        [key: string]: any;
+    };
+    $setOnce?: {
+        [key: string]: any;
+    };
+    $append?: {
+        [key: string]: any;
+    };
+    $prepend?: {
+        [key: string]: any;
+    };
+    $add?: {
+        [key: string]: any;
+    };
+}
+
+export interface ObjectProperties {
+    [key: string]: any;
+}
+
+export type UserProperties = SetProperties | ObjectProperties;
+export type GroupProperties = SetProperties | ObjectProperties;
+
+export interface Groups {
+    [groupType: string]: string | string[];
+}
+
+// https://developers.amplitude.com/#keys-for-the-event-argument
+export interface AmplitudeEventData extends CommonEventProps {
+    event_type: string;
+    user_id: string;
+    device_id?: string;
+    time?: number;
+    event_properties?: {
+        [key: string]: any;
+    };
+    user_properties?: UserProperties;
+    groups?: Groups;
     price?: number;
     quantity?: number;
     revenue?: number;
@@ -57,6 +88,18 @@ export interface AmplitudeEventData {
     session_id?: number;
     insert_id?: string;
 }
+
+// https://developers.amplitude.com/#request-format---idenify
+interface CommonUserIdentification extends CommonEventProps {
+    user_properties?: UserProperties;
+    groups?: Groups;
+    paying?: 'true' | 'false';
+    start_version?: string;
+}
+
+type UserIdIdentification = CommonUserIdentification & { user_id: string };
+type UserDeviceIdentification = CommonUserIdentification & { device_id: string };
+export type UserIdentification = UserIdIdentification | UserDeviceIdentification;
 
 interface AmplitudeResponse<T> {
     statusCode: number;
@@ -88,6 +131,10 @@ export interface AmplitudeEventRequestData extends ApiKeyData {
 }
 
 export interface AmplitudeGroupIdentifyRequestData extends ApiKeyData {
+    identification: string;
+}
+
+export interface AmplitudeIdentifyRequestData extends ApiKeyData {
     identification: string;
 }
 
@@ -127,10 +174,6 @@ export class AmplitudeClient {
             event: JSON.stringify(event),
         };
 
-        if (!this.enabled) {
-            return this.emptyResponse(formData);
-        }
-
         const options: http.RequestOptions = {
             method: 'POST',
             path: '/httpapi',
@@ -139,10 +182,26 @@ export class AmplitudeClient {
         return this.sendRequest(options, formData);
     }
 
+    public async identify(
+        identify: UserIdentification,
+    ): Promise<AmplitudeResponse<AmplitudeIdentifyRequestData>> {
+        const formData: AmplitudeIdentifyRequestData = {
+            api_key: this.apiKey,
+            identification: JSON.stringify(identify)
+        };
+
+        const options: http.RequestOptions = {
+            method: 'POST',
+            path: '/identify',
+        };
+
+        return this.sendRequest(options, formData);
+    }
+
     public async groupIdentify(
         groupType: string,
         groupValue: string,
-        groupProps: { [key: string]: any },
+        groupProps: GroupProperties,
     ): Promise<AmplitudeResponse<AmplitudeGroupIdentifyRequestData>> {
         const formData: AmplitudeGroupIdentifyRequestData = {
             api_key: this.apiKey,
@@ -158,25 +217,7 @@ export class AmplitudeClient {
             path: '/groupidentify',
         };
 
-        if (!this.enabled) {
-            return this.emptyResponse(formData);
-        }
-
         return this.sendRequest(options, formData);
-    }
-
-    private emptyResponse<T>(formData: T): AmplitudeResponse<T> {
-        return {
-            body: Buffer.alloc(0),
-            start: new Date(),
-            end: new Date(),
-            requestOptions: {},
-            responseHeaders: {},
-            statusCode: 0,
-            succeeded: true,
-            retryCount: 0,
-            requestData: formData,
-        };
     }
 
     private async sendRequest<T>(
@@ -195,6 +236,20 @@ export class AmplitudeClient {
         options.headers = options.headers || {};
         options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
         options.headers['Content-Length'] = Buffer.byteLength(postData);
+
+        if (!this.enabled) {
+            return {
+                body: Buffer.alloc(0),
+                start: new Date(),
+                end: new Date(),
+                requestOptions: options,
+                responseHeaders: {},
+                statusCode: 0,
+                succeeded: true,
+                retryCount: 0,
+                requestData: formData,
+            };
+        }
 
         const result = await new Promise<AmplitudeResponse<T>>((resolve, reject) => {
             const start = new Date();
@@ -227,6 +282,7 @@ export class AmplitudeClient {
             }
         });
 
+        // https://developers.amplitude.com/#http-status-codes--amp--retrying-failed-requests
         const retryableStatusCodes = {
             500: true,
             502: true,

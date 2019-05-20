@@ -8,6 +8,7 @@ Features:
 - No dependencies
 - event tracking (`/httpapi`)
 - group identification (`/groupidentify`)
+- user identification (`/identify`)
 - there are tests
 - requires Node v8 or higher
 
