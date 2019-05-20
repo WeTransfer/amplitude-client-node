@@ -58,6 +58,53 @@ describe('Amplitude API', () => {
             });
         });
 
+        it('should track event with time and app_version', async () => {
+            let callCount = 0;
+            let reqBody: any;
+            app.post('/httpapi', (req, res) => {
+                callCount++;
+                reqBody = req.body;
+                res.send('hello world');
+            });
+
+            const start = new Date();
+
+            const client = new amplitude.AmplitudeClient('xxx', {
+                endpoint,
+                setTime: true,
+                appVersion: '7.6.8'
+            });
+            const event: amplitude.AmplitudeEventData = {
+                user_id: '12345',
+                event_type: 'my event',
+                ip: '1.2.3.4'
+            };
+            const res = await client.track(event);
+
+            expect(callCount).to.equal(1);
+
+            expect(res).to.have.property('start').greaterThan(start.getTime() - 1);
+            expect(res).to.have.property('end').greaterThan(start.getTime());
+            expect(res).to.have.property('statusCode', 200);
+            expect(res).to.have.property('retryCount', 0);
+
+            expect(res).to.have.property('body').a(Buffer);
+            expect(res.body.toString('utf8')).to.equal('hello world');
+
+            expect(reqBody).to.have.property('event');
+            const reqEvent = JSON.parse(reqBody.event);
+            expect(reqEvent).to.have.property('time');
+            expect(reqEvent.time).to.be.greaterThan(start.getTime() - 1);
+            expect(reqBody).to.eql({
+                api_key: 'xxx',
+                event: JSON.stringify({
+                    ...event,
+                    time: reqEvent.time,
+                    app_version: '7.6.8'
+                })
+            });
+        });
+
         it('should track event with automatic insert_id and retries', async () => {
             let callCount = 0;
             let reqBody: any;
