@@ -1,15 +1,18 @@
 import * as amplitude from '../';
 import * as express from 'express';
-import * as http from 'http'
+import * as fs from 'fs';
+import * as path from 'path';
+import * as http from 'http';
+import * as https from 'https';
 import expect = require('expect.js');
 
 describe('Amplitude API', () => {
     let app: express.Application;
     let server: http.Server;
     let endpoint: string;
+    const port = 19567;
 
     beforeEach((done) => {
-        const port = 19567;
         endpoint = `http://localhost:${port}`;
         app = express();
         app.use(express.urlencoded({ extended: true }));
@@ -359,6 +362,65 @@ describe('Amplitude API', () => {
                         'Team ID': '34567'
                     }
                 })
+            });
+        });
+    });
+
+    describe('https', () => {
+        let httpsServer: http.Server;
+        const key = fs.readFileSync(path.join(__dirname, 'ssl', 'self-signed-key.pem'));
+        const cert = fs.readFileSync(path.join(__dirname, 'ssl', 'self-signed-cert.pem'));
+        const httpsPort = port + 1;
+
+        beforeEach((done) => {
+            const options: https.ServerOptions = {
+                cert: cert,
+                key: key,
+            };
+            httpsServer = https.createServer(options, app).listen(httpsPort, done);
+        });
+
+        afterEach((done) => {
+            httpsServer.close(done);
+        });
+
+        it('should invoke https endpoint', async () => {
+            const httpsEndpoint = `https://localhost:${httpsPort}`;
+            let callCount = 0;
+            let reqBody: any;
+            app.post('/httpapi', (req, res) => {
+                callCount++;
+                reqBody = req.body;
+                res.send('hello world');
+            });
+
+            const start = new Date();
+
+            const client = new amplitude.AmplitudeClient('xxx', {
+                endpoint: httpsEndpoint,
+            });
+            const event: amplitude.AmplitudeEventData = {
+                user_id: '12345',
+                event_type: 'my event',
+                ip: '1.2.3.4'
+            };
+            const res = await client.track(event, {
+                rejectUnauthorized: false
+            });
+
+            expect(callCount).to.equal(1);
+
+            expect(res).to.have.property('start').greaterThan(start.getTime() - 1);
+            expect(res).to.have.property('end').greaterThan(start.getTime());
+            expect(res).to.have.property('statusCode', 200);
+            expect(res).to.have.property('retryCount', 0);
+
+            expect(res).to.have.property('body').a(Buffer);
+            expect(res.body.toString('utf8')).to.equal('hello world');
+
+            expect(reqBody).to.eql({
+                api_key: 'xxx',
+                event: JSON.stringify(event)
             });
         });
     });

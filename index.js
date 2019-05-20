@@ -22,7 +22,7 @@ class AmplitudeClient {
         this.timeoutMs = options.timeoutMs || 5000;
         this.endpoint = options.endpoint || 'https://api.amplitude.com';
     }
-    async track(event) {
+    async track(event, reqOptions) {
         if (this.setTime) {
             event.time = Date.now();
         }
@@ -36,24 +36,18 @@ class AmplitudeClient {
             api_key: this.apiKey,
             event: JSON.stringify(event),
         };
-        const options = {
-            method: 'POST',
-            path: '/httpapi',
-        };
+        const options = Object.assign({ method: 'POST', path: '/httpapi' }, reqOptions);
         return this.sendRequest(options, formData);
     }
-    async identify(identify) {
+    async identify(identify, reqOptions) {
         const formData = {
             api_key: this.apiKey,
             identification: JSON.stringify(identify)
         };
-        const options = {
-            method: 'POST',
-            path: '/identify',
-        };
+        const options = Object.assign({ method: 'POST', path: '/identify' }, reqOptions);
         return this.sendRequest(options, formData);
     }
-    async groupIdentify(groupType, groupValue, groupProps) {
+    async groupIdentify(groupType, groupValue, groupProps, reqOptions) {
         const formData = {
             api_key: this.apiKey,
             identification: JSON.stringify({
@@ -62,10 +56,7 @@ class AmplitudeClient {
                 group_properties: groupProps
             })
         };
-        const options = {
-            method: 'POST',
-            path: '/groupidentify',
-        };
+        const options = Object.assign({ method: 'POST', path: '/groupidentify' }, reqOptions);
         return this.sendRequest(options, formData);
     }
     async sendRequest(options, formData, retryCount = 0) {
@@ -94,7 +85,7 @@ class AmplitudeClient {
         const result = await new Promise((resolve, reject) => {
             const start = new Date();
             try {
-                const httpLib = options.protocol === 'https' ? https : http;
+                const httpLib = options.protocol === 'https:' ? https : http;
                 const req = httpLib.request(options, (res) => {
                     res.on('error', reject);
                     const chunks = [];
@@ -103,6 +94,8 @@ class AmplitudeClient {
                         resolve({
                             start,
                             end: new Date(),
+                            // should be "success" for successful requests
+                            // or some kind of message for failures (or HTML for 502s)
                             body: Buffer.concat(chunks),
                             requestOptions: options,
                             responseHeaders: res.headers,
@@ -141,3 +134,4 @@ class AmplitudeClient {
     }
 }
 exports.AmplitudeClient = AmplitudeClient;
+//# sourceMappingURL=index.js.map

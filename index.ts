@@ -158,7 +158,10 @@ export class AmplitudeClient {
         this.endpoint = options.endpoint || 'https://api.amplitude.com';
     }
 
-    public async track(event: AmplitudeEventData): Promise<AmplitudeResponse<AmplitudeEventRequestData>> {
+    public async track(
+        event: AmplitudeEventData,
+        reqOptions?: https.RequestOptions
+    ): Promise<AmplitudeResponse<AmplitudeEventRequestData>> {
         if (this.setTime) {
             event.time = Date.now();
         }
@@ -177,6 +180,7 @@ export class AmplitudeClient {
         const options: http.RequestOptions = {
             method: 'POST',
             path: '/httpapi',
+            ...reqOptions
         };
 
         return this.sendRequest(options, formData);
@@ -184,6 +188,7 @@ export class AmplitudeClient {
 
     public async identify(
         identify: UserIdentification,
+        reqOptions?: https.RequestOptions
     ): Promise<AmplitudeResponse<AmplitudeIdentifyRequestData>> {
         const formData: AmplitudeIdentifyRequestData = {
             api_key: this.apiKey,
@@ -193,6 +198,7 @@ export class AmplitudeClient {
         const options: http.RequestOptions = {
             method: 'POST',
             path: '/identify',
+            ...reqOptions
         };
 
         return this.sendRequest(options, formData);
@@ -202,6 +208,7 @@ export class AmplitudeClient {
         groupType: string,
         groupValue: string,
         groupProps: GroupProperties,
+        reqOptions?: https.RequestOptions
     ): Promise<AmplitudeResponse<AmplitudeGroupIdentifyRequestData>> {
         const formData: AmplitudeGroupIdentifyRequestData = {
             api_key: this.apiKey,
@@ -215,13 +222,14 @@ export class AmplitudeClient {
         const options: http.RequestOptions = {
             method: 'POST',
             path: '/groupidentify',
+            ...reqOptions
         };
 
         return this.sendRequest(options, formData);
     }
 
     private async sendRequest<T>(
-        options: http.RequestOptions,
+        options: https.RequestOptions,
         formData: any,
         retryCount = 0,
     ): Promise<AmplitudeResponse<T>> {
@@ -254,7 +262,7 @@ export class AmplitudeClient {
         const result = await new Promise<AmplitudeResponse<T>>((resolve, reject) => {
             const start = new Date();
             try {
-                const httpLib = options.protocol === 'https' ? https : http;
+                const httpLib = options.protocol === 'https:' ? https : http;
                 const req = httpLib.request(options, (res) => {
                     res.on('error', reject);
                     const chunks: Buffer[] = [];
@@ -263,6 +271,8 @@ export class AmplitudeClient {
                         resolve({
                             start,
                             end: new Date(),
+                            // should be "success" for successful requests
+                            // or some kind of message for failures (or HTML for 502s)
                             body: Buffer.concat(chunks),
                             requestOptions: options,
                             responseHeaders: res.headers,
