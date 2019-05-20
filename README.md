@@ -1,5 +1,7 @@
 # amplitude-client-node
 
+[![Build Status](https://travis-ci.org/WeTransfer/amplitude-client-node.png)](https://travis-ci.org/WeTransfer/amplitude-client-node)
+
 A simple wrapper around Amplitude's Groups and HTTP APIs.
 
 Features:
