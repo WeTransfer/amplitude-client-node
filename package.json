@@ -23,7 +23,8 @@
     },
     "files": [
         "index.ts",
-        "index.js"
+        "index.js",
+        "index.js.map"
     ],
     "devDependencies": {
         "@types/expect.js": "0.3.29",

@@ -5,7 +5,8 @@
         "module": "commonjs",
         "noEmitOnError": true,
         "strictNullChecks": true,
-        "forceConsistentCasingInFileNames": true
+        "forceConsistentCasingInFileNames": true,
+        "sourceMap": true
     },
     "exclude": [
         "node_modules",
