@@ -1,6 +1,6 @@
 {
     "name": "amplitude-client-node",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Simple, no-dependency wrapper around Amplitude's HTTP API",
     "repository": {
         "type": "git",
