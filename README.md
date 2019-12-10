@@ -2,13 +2,15 @@
 
 [![Build Status](https://travis-ci.com/WeTransfer/amplitude-client-node.svg?branch=master)](https://travis-ci.com/WeTransfer/amplitude-client-node)
 
-A simple wrapper around Amplitude's Groups and HTTP APIs.
+A simple wrapper around Amplitude's Groups and HTTP (v2) APIs.
+
+For legacy v1 HTTP API, use `v0.2.0`.
 
 Features:
 - automatic, configurable retry with generated `insert_id`
 - TypeScript support
 - No dependencies
-- event tracking (`/httpapi`)
+- event tracking (`/2/httpapi`)
 - group identification (`/groupidentify`)
 - user identification (`/identify`)
 - there are tests
