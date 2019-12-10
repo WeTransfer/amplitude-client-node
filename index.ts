@@ -131,6 +131,7 @@ interface ApiKeyData {
 
 export interface AmplitudeEventRequestData<T = string> extends ApiKeyData {
     events: AmplitudeEventData<T>[];
+    options?: AmplitudeApiOptions;
 }
 
 export interface AmplitudeGroupIdentifyRequestData extends ApiKeyData {
@@ -139,6 +140,10 @@ export interface AmplitudeGroupIdentifyRequestData extends ApiKeyData {
 
 export interface AmplitudeIdentifyRequestData extends ApiKeyData {
     identification: string;
+}
+
+export interface AmplitudeApiOptions {
+    min_id_length?: number;
 }
 
 export class AmplitudeClient<TEventNames = string> {
@@ -165,7 +170,8 @@ export class AmplitudeClient<TEventNames = string> {
 
     public async track(
         event: AmplitudeEventData<TEventNames>,
-        reqOptions?: https.RequestOptions
+        reqOptions?: https.RequestOptions,
+        options: AmplitudeApiOptions = {}
     ): Promise<AmplitudeResponse<AmplitudeEventRequestData>> {
         if (this.setTime) {
             event.time = Date.now();
@@ -180,9 +186,10 @@ export class AmplitudeClient<TEventNames = string> {
         const formData: AmplitudeEventRequestData<TEventNames> = {
             api_key: this.apiKey,
             events: [ event ],
+            options
         };
 
-        const options: http.RequestOptions = {
+        const httpOptions: http.RequestOptions = {
             method: 'POST',
             path: '/2/httpapi',
             ...reqOptions,
@@ -192,7 +199,7 @@ export class AmplitudeClient<TEventNames = string> {
             },
         };
 
-        return this.sendRequest(options, formData);
+        return this.sendRequest(httpOptions, formData);
     }
 
     public async identify(

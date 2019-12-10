@@ -58,7 +58,8 @@ describe('Amplitude API', () => {
 
             expect(reqBody).to.eql({
                 api_key: 'xxx',
-                events: [ event ]
+                events: [ event ],
+                options: {}
             });
         });
 
@@ -106,7 +107,8 @@ describe('Amplitude API', () => {
                     ...event,
                     time: reqEvent.time,
                     app_version: '7.6.8'
-                }]
+                }],
+                options: {}
             });
         });
 
@@ -155,6 +157,49 @@ describe('Amplitude API', () => {
             expect(reqBody).to.eql({
                 api_key: 'xxx',
                 events: [ event ],
+                options: {},
+            });
+        });
+
+        it('should track event with min_id_length', async () => {
+            let callCount = 0;
+            let reqBody: any;
+            app.post('/2/httpapi', (req, res) => {
+                callCount++;
+                reqBody = req.body;
+                res.send('hello world');
+            });
+
+            const start = new Date();
+
+            const client = new amplitude.AmplitudeClient('xxx', {
+                endpoint,
+            });
+            const event: amplitude.AmplitudeEventData = {
+                user_id: '12345',
+                event_type: 'my event',
+                ip: '1.2.3.4'
+            };
+            const res = await client.track(event, {}, {
+                min_id_length: 1,
+            });
+
+            expect(callCount).to.equal(1);
+
+            expect(res).to.have.property('start').greaterThan(start.getTime() - 1);
+            expect(res).to.have.property('end').greaterThan(start.getTime());
+            expect(res).to.have.property('statusCode', 200);
+            expect(res).to.have.property('retryCount', 0);
+
+            expect(res).to.have.property('body').a(Buffer);
+            expect(res.body.toString('utf8')).to.equal('hello world');
+
+            expect(reqBody).to.eql({
+                api_key: 'xxx',
+                events: [event],
+                options: {
+                    min_id_length: 1
+                }
             });
         });
 
@@ -461,7 +506,8 @@ describe('Amplitude API', () => {
 
             expect(reqBody).to.eql({
                 api_key: 'xxx',
-                events: [ event ]
+                events: [ event ],
+                options: {}
             });
         });
     });

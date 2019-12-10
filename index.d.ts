@@ -113,12 +113,16 @@ interface ApiKeyData {
 }
 export interface AmplitudeEventRequestData<T = string> extends ApiKeyData {
     events: AmplitudeEventData<T>[];
+    options?: AmplitudeApiOptions;
 }
 export interface AmplitudeGroupIdentifyRequestData extends ApiKeyData {
     identification: string;
 }
 export interface AmplitudeIdentifyRequestData extends ApiKeyData {
     identification: string;
+}
+export interface AmplitudeApiOptions {
+    min_id_length?: number;
 }
 export declare class AmplitudeClient<TEventNames = string> {
     private readonly apiKey;
@@ -130,7 +134,7 @@ export declare class AmplitudeClient<TEventNames = string> {
     private readonly endpoint;
     private readonly logging?;
     constructor(apiKey: string, options?: ClientOptions);
-    track(event: AmplitudeEventData<TEventNames>, reqOptions?: https.RequestOptions): Promise<AmplitudeResponse<AmplitudeEventRequestData>>;
+    track(event: AmplitudeEventData<TEventNames>, reqOptions?: https.RequestOptions, options?: AmplitudeApiOptions): Promise<AmplitudeResponse<AmplitudeEventRequestData>>;
     identify(identify: UserIdentification, reqOptions?: https.RequestOptions): Promise<AmplitudeResponse<AmplitudeIdentifyRequestData>>;
     groupIdentify(groupType: string, groupValue: string, groupProps: GroupProperties, reqOptions?: https.RequestOptions): Promise<AmplitudeResponse<AmplitudeGroupIdentifyRequestData>>;
     private sendRequest;

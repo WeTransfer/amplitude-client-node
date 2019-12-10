@@ -23,7 +23,7 @@ class AmplitudeClient {
         this.endpoint = options.endpoint || 'https://api.amplitude.com';
         this.logging = options.logging;
     }
-    async track(event, reqOptions) {
+    async track(event, reqOptions, options = {}) {
         var _a;
         if (this.setTime) {
             event.time = Date.now();
@@ -37,9 +37,10 @@ class AmplitudeClient {
         const formData = {
             api_key: this.apiKey,
             events: [event],
+            options
         };
-        const options = Object.assign(Object.assign({ method: 'POST', path: '/2/httpapi' }, reqOptions), { headers: Object.assign(Object.assign({}, (_a = reqOptions) === null || _a === void 0 ? void 0 : _a.headers), { 'Content-Type': 'application/json' }) });
-        return this.sendRequest(options, formData);
+        const httpOptions = Object.assign(Object.assign({ method: 'POST', path: '/2/httpapi' }, reqOptions), { headers: Object.assign(Object.assign({}, (_a = reqOptions) === null || _a === void 0 ? void 0 : _a.headers), { 'Content-Type': 'application/json' }) });
+        return this.sendRequest(httpOptions, formData);
     }
     async identify(identify, reqOptions) {
         var _a;
