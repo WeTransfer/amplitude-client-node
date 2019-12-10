@@ -24,6 +24,7 @@ class AmplitudeClient {
         this.logging = options.logging;
     }
     async track(event, reqOptions) {
+        var _a;
         if (this.setTime) {
             event.time = Date.now();
         }
@@ -35,20 +36,22 @@ class AmplitudeClient {
         }
         const formData = {
             api_key: this.apiKey,
-            event: JSON.stringify(event),
+            events: [event],
         };
-        const options = Object.assign({ method: 'POST', path: '/httpapi' }, reqOptions);
+        const options = Object.assign(Object.assign({ method: 'POST', path: '/2/httpapi' }, reqOptions), { headers: Object.assign(Object.assign({}, (_a = reqOptions) === null || _a === void 0 ? void 0 : _a.headers), { 'Content-Type': 'application/json' }) });
         return this.sendRequest(options, formData);
     }
     async identify(identify, reqOptions) {
+        var _a;
         const formData = {
             api_key: this.apiKey,
             identification: JSON.stringify(identify)
         };
-        const options = Object.assign({ method: 'POST', path: '/identify' }, reqOptions);
+        const options = Object.assign(Object.assign({ method: 'POST', path: '/identify' }, reqOptions), { headers: Object.assign(Object.assign({}, (_a = reqOptions) === null || _a === void 0 ? void 0 : _a.headers), { 'Content-Type': 'application/x-www-form-urlencoded' }) });
         return this.sendRequest(options, formData);
     }
     async groupIdentify(groupType, groupValue, groupProps, reqOptions) {
+        var _a;
         const formData = {
             api_key: this.apiKey,
             identification: JSON.stringify({
@@ -57,7 +60,7 @@ class AmplitudeClient {
                 group_properties: groupProps
             })
         };
-        const options = Object.assign({ method: 'POST', path: '/groupidentify' }, reqOptions);
+        const options = Object.assign(Object.assign({ method: 'POST', path: '/groupidentify' }, reqOptions), { headers: Object.assign(Object.assign({}, (_a = reqOptions) === null || _a === void 0 ? void 0 : _a.headers), { 'Content-Type': 'application/x-www-form-urlencoded' }) });
         return this.sendRequest(options, formData);
     }
     async sendRequest(options, formData, retryCount = 0) {
@@ -66,10 +69,21 @@ class AmplitudeClient {
         options.hostname = url.hostname;
         options.port = url.port;
         options.timeout = this.timeoutMs;
-        const postData = querystring.stringify(formData);
-        const byteLength = Buffer.byteLength(postData);
+        let byteLength;
+        let postData;
         options.headers = options.headers || {};
-        options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        switch (options.headers['Content-Type']) {
+            case 'application/x-www-form-urlencoded':
+                postData = querystring.stringify(formData);
+                byteLength = Buffer.byteLength(postData);
+                break;
+            case 'application/json':
+                postData = JSON.stringify(formData);
+                byteLength = Buffer.byteLength(postData);
+                break;
+            default:
+                throw new Error(`Unknown Content-Type header: "${options.headers['Content-Type']}"`);
+        }
         options.headers['Content-Length'] = byteLength;
         if (!this.enabled) {
             return {

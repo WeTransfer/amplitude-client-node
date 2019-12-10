@@ -16,6 +16,7 @@ describe('Amplitude API', () => {
         endpoint = `http://localhost:${port}`;
         app = express();
         app.use(express.urlencoded({ extended: true }));
+        app.use(express.json());
         server = app.listen(port, done);
     });
 
@@ -27,7 +28,7 @@ describe('Amplitude API', () => {
         it('should track event', async () => {
             let callCount = 0;
             let reqBody: any;
-            app.post('/httpapi', (req, res) => {
+            app.post('/2/httpapi', (req, res) => {
                 callCount++;
                 reqBody = req.body;
                 res.send('hello world');
@@ -57,14 +58,14 @@ describe('Amplitude API', () => {
 
             expect(reqBody).to.eql({
                 api_key: 'xxx',
-                event: JSON.stringify(event)
+                events: [ event ]
             });
         });
 
         it('should track event with time and app_version', async () => {
             let callCount = 0;
             let reqBody: any;
-            app.post('/httpapi', (req, res) => {
+            app.post('/2/httpapi', (req, res) => {
                 callCount++;
                 reqBody = req.body;
                 res.send('hello world');
@@ -94,24 +95,25 @@ describe('Amplitude API', () => {
             expect(res).to.have.property('body').a(Buffer);
             expect(res.body.toString('utf8')).to.equal('hello world');
 
-            expect(reqBody).to.have.property('event');
-            const reqEvent = JSON.parse(reqBody.event);
+            expect(reqBody).to.have.property('events');
+            expect(reqBody.events).to.be.an('array');
+            const reqEvent = reqBody.events[0];
             expect(reqEvent).to.have.property('time');
             expect(reqEvent.time).to.be.greaterThan(start.getTime() - 1);
             expect(reqBody).to.eql({
                 api_key: 'xxx',
-                event: JSON.stringify({
+                events: [{
                     ...event,
                     time: reqEvent.time,
                     app_version: '7.6.8'
-                })
+                }]
             });
         });
 
         it('should track event with automatic insert_id and retries', async () => {
             let callCount = 0;
             let reqBody: any;
-            app.post('/httpapi', (req, res) => {
+            app.post('/2/httpapi', (req, res) => {
                 callCount++;
                 if (callCount < 5) {
                     res.sendStatus(502);
@@ -142,20 +144,23 @@ describe('Amplitude API', () => {
             expect(res).to.have.property('statusCode', 200);
             expect(res).to.have.property('retryCount', 4);
             expect(res).to.have.property('requestData');
-            expect(JSON.parse(res.requestData.event)).to.have.property('insert_id');
+            const events = res.requestData.events;
+            expect(events).to.be.an('array');
+            expect(events).to.have.length(1);
+            expect(events[0]).to.have.property('insert_id');
 
             expect(res).to.have.property('body').a(Buffer);
             expect(res.body.toString('utf8')).to.equal('hello world');
 
             expect(reqBody).to.eql({
                 api_key: 'xxx',
-                event: JSON.stringify(event)
+                events: [ event ],
             });
         });
 
         it('should throw error if maxRetries is reached', async () => {
             let callCount = 0;
-            app.post('/httpapi', (req, res) => {
+            app.post('/2/httpapi', (req, res) => {
                 callCount++;
                 res.status(502);
                 res.send('nope');
@@ -178,7 +183,7 @@ describe('Amplitude API', () => {
                 expect(e).to.be.a(amplitude.AmplitudeApiError);
                 expect(error).to.have.property('response');
                 expect(error).to.have.property('message', `Amplitude API call to ` +
-                    `${endpoint}/httpapi failed with status 502 after 5 retries`);
+                    `${endpoint}/2/httpapi failed with status 502 after 5 retries`);
                 expect(error.response.statusCode).to.equal(502);
                 expect(error.response.succeeded).to.equal(false);
                 return;
@@ -190,7 +195,7 @@ describe('Amplitude API', () => {
         [ 400, 413, 429, 501 ].forEach((status) => {
             it(`should not retry for ${status} status code`, async () => {
                 let callCount = 0;
-                app.post('/httpapi', (req, res) => {
+                app.post('/2/httpapi', (req, res) => {
                     callCount++;
                     res.status(status);
                     res.send('nope');
@@ -213,7 +218,7 @@ describe('Amplitude API', () => {
                     expect(e).to.be.a(amplitude.AmplitudeApiError);
                     expect(error).to.have.property('response');
                     expect(error).to.have.property('message', `Amplitude API call to ` +
-                        `${endpoint}/httpapi failed with status ${status} after 0 retries`);
+                        `${endpoint}/2/httpapi failed with status ${status} after 0 retries`);
                     expect(error.response.statusCode).to.equal(status);
                     expect(error.response.succeeded).to.equal(false);
                     return;
@@ -225,7 +230,7 @@ describe('Amplitude API', () => {
 
         it('should not track event if not enabled', async () => {
             let callCount = 0;
-            app.post('/httpapi', (req, res) => {
+            app.post('/2/httpapi', (req, res) => {
                 callCount++;
                 res.sendStatus(200);
             });
@@ -246,7 +251,7 @@ describe('Amplitude API', () => {
 
         it('should throw error for invalid status code', async () => {
             let callCount = 0;
-            app.post('/httpapi', (req, res) => {
+            app.post('/2/httpapi', (req, res) => {
                 callCount++;
                 res.sendStatus(501);
             });
@@ -424,7 +429,7 @@ describe('Amplitude API', () => {
             const httpsEndpoint = `https://localhost:${httpsPort}`;
             let callCount = 0;
             let reqBody: any;
-            app.post('/httpapi', (req, res) => {
+            app.post('/2/httpapi', (req, res) => {
                 callCount++;
                 reqBody = req.body;
                 res.send('hello world');
@@ -456,7 +461,7 @@ describe('Amplitude API', () => {
 
             expect(reqBody).to.eql({
                 api_key: 'xxx',
-                event: JSON.stringify(event)
+                events: [ event ]
             });
         });
     });

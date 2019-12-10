@@ -111,8 +111,8 @@ export declare class AmplitudeApiError<T> extends Error {
 interface ApiKeyData {
     api_key: string;
 }
-export interface AmplitudeEventRequestData extends ApiKeyData {
-    event: string;
+export interface AmplitudeEventRequestData<T = string> extends ApiKeyData {
+    events: AmplitudeEventData<T>[];
 }
 export interface AmplitudeGroupIdentifyRequestData extends ApiKeyData {
     identification: string;

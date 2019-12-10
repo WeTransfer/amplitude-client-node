@@ -129,8 +129,8 @@ interface ApiKeyData {
     api_key: string;
 }
 
-export interface AmplitudeEventRequestData extends ApiKeyData {
-    event: string;
+export interface AmplitudeEventRequestData<T = string> extends ApiKeyData {
+    events: AmplitudeEventData<T>[];
 }
 
 export interface AmplitudeGroupIdentifyRequestData extends ApiKeyData {
@@ -177,15 +177,19 @@ export class AmplitudeClient<TEventNames = string> {
             event.insert_id = Date.now() + '_' + Math.random().toString().substring(2);
         }
 
-        const formData: AmplitudeEventRequestData = {
+        const formData: AmplitudeEventRequestData<TEventNames> = {
             api_key: this.apiKey,
-            event: JSON.stringify(event),
+            events: [ event ],
         };
 
         const options: http.RequestOptions = {
             method: 'POST',
-            path: '/httpapi',
-            ...reqOptions
+            path: '/2/httpapi',
+            ...reqOptions,
+            headers: {
+                ...reqOptions?.headers,
+                'Content-Type': 'application/json',
+            },
         };
 
         return this.sendRequest(options, formData);
@@ -203,7 +207,11 @@ export class AmplitudeClient<TEventNames = string> {
         const options: http.RequestOptions = {
             method: 'POST',
             path: '/identify',
-            ...reqOptions
+            ...reqOptions,
+            headers: {
+                ...reqOptions?.headers,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
         };
 
         return this.sendRequest(options, formData);
@@ -227,7 +235,11 @@ export class AmplitudeClient<TEventNames = string> {
         const options: http.RequestOptions = {
             method: 'POST',
             path: '/groupidentify',
-            ...reqOptions
+            ...reqOptions,
+            headers: {
+                ...reqOptions?.headers,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
         };
 
         return this.sendRequest(options, formData);
@@ -244,11 +256,22 @@ export class AmplitudeClient<TEventNames = string> {
         options.port = url.port;
         options.timeout = this.timeoutMs;
 
-        const postData = querystring.stringify(formData);
-        const byteLength = Buffer.byteLength(postData);
-
+        let byteLength: number;
+        let postData: string;
         options.headers = options.headers || {};
-        options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        switch (options.headers['Content-Type']) {
+            case 'application/x-www-form-urlencoded':
+                postData = querystring.stringify(formData);
+                byteLength = Buffer.byteLength(postData);
+                break;
+            case 'application/json':
+                postData = JSON.stringify(formData);
+                byteLength = Buffer.byteLength(postData);
+                break;
+            default:
+                throw new Error(`Unknown Content-Type header: "${options.headers['Content-Type']}"`);
+        }
+
         options.headers['Content-Length'] = byteLength;
 
         if (!this.enabled) {
